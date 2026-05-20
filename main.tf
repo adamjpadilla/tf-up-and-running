@@ -4,20 +4,35 @@ provider "aws" {
 
 
 
-resource "aws_instance" "example" {
-    ami           = "ami-0fe18bc3cfa53a248"
-    instance_type = "t2.micro"
-    vpc_security_group_ids = [aws_security_group.instance.id]
+resource "aws_launch_configuration" "example" {
+    image_id           = "ami-0fe18bc3cfa53a248"
+    instance_type      = "t2.micro"
+    security_groups    = [aws_security_group.instance.id]
 
 user_data = <<-EOF
               #!/bin/bash
               echo "Hello, World!" > index.html
               nohup busybox httpd -f -p ${var.server_port} &
               EOF
-tags = {
-    Name = "terraform-example"
+#Required when using a launch configuration with an auto scaling group.
+  lifecycle {
+    create_before_destroy = true
   }
 } 
+
+resource "aws_autoscaling_group" "example" {
+  launch_configuration    = aws_launch_configuration.example.name
+  vpc_zone_identifer      = data.aws_subnets.default.ids
+  max_size                  = 2
+  min_size                  = 10
+  
+  tag {
+    key                 = "Name"
+    value               = "terraform-asg-instance"
+    propagate_at_launch = true
+  }
+
+}
 
 resource "aws_security_group" "instance" {
   name        = "terraform-example-instance"
@@ -39,4 +54,11 @@ variable "server_port" {
 output "public_ip" {
   value = aws_instance.example.public_ip
   description = "The public IP address of the web server"
+}
+
+data "aws_subnets" "default" {
+    filter {
+        name   = "vpc-id"
+        values = [data.aws_vpc.default.id]
+    }
 }
