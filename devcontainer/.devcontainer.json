@@ -1,7 +1,0 @@
-{
-    "name": "Terraform Dev",
-    "image": "mcr.microsoft.com/devcontainer/base:ubuntu",
-    "features":{
-        "ghcr.io/devcontainers/features/terraform1": {}
-    }
-}
